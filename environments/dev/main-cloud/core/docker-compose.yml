@@ -1,7 +1,7 @@
 version: "3"
 services:
   database:
-    container_name: smart-parking-postgres
+    container_name: main-cloud-postgres
     image: postgres:10.2
     restart: always
     ports:
@@ -15,7 +15,7 @@ services:
       - ./scripts/database/create_databases_postgres.sql:/docker-entrypoint-initdb.d/create_databases_postgres.sql
 
   registry:
-    container_name: smart-parking-registry
+    container_name: main-cloud-registry
     image: openjdk:9-jre-slim
     restart: always
     ports:
@@ -32,7 +32,7 @@ services:
     command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.serviceregistry_sql.ServiceRegistryMain -daemon
   
   authorization:
-    container_name: smart-parking-authorization
+    container_name: main-cloud-authorization
     image: openjdk:9-jre-slim
     restart: always
     ports:
@@ -50,7 +50,7 @@ services:
     command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.authorization.AuthorizationMain -daemon
   
   orchestrator:
-    container_name: smart-parking-orchestrator
+    container_name: main-cloud-orchestrator
     image: openjdk:9-jre-slim
     restart: always
     ports:
@@ -70,7 +70,7 @@ services:
     command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.orchestrator.OrchestratorMain -daemon
   
   gatekeeper:
-    container_name: smart-parking-gatekeeper
+    container_name: main-cloud-gatekeeper
     image: openjdk:9-jre-slim
     restart: always
     ports:
@@ -89,7 +89,7 @@ services:
     command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.gatekeeper.GatekeeperMain -daemon -d
   
   gateway:
-    container_name: smart-parking-gateway
+    container_name: main-cloud-gateway
     image: openjdk:9-jre-slim
     restart: always
     links:
@@ -106,7 +106,7 @@ services:
     command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.gateway.GatewayMain -daemon -d
 
   broker:
-    container_name: smart-parking-broker
+    container_name: main-cloud-broker
     image: rabbitmq:management
     restart: always
     networks:
