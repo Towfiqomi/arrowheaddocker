@@ -1,0 +1,120 @@
+version: "3"
+services:
+  database:
+    container_name: smart-parking-postgres
+    image: postgres:10.2
+    restart: always
+    ports:
+      - 5432:5432
+    networks:
+      - cloud
+    environment:
+      POSTGRES_PASSWORD: root
+      POSTGRES_USER: root
+    volumes:
+      - ./scripts/database/create_databases_postgres.sql:/docker-entrypoint-initdb.d/create_databases_postgres.sql
+
+  registry:
+    container_name: smart-parking-registry
+    image: openjdk:9-jre-slim
+    restart: always
+    ports:
+      - 8442:8442
+    links:
+      - database
+    networks:
+      - cloud
+    volumes:
+      - ${SOFTWARE_BASE}/serviceregistry_sql/target/:/arrowhead/serviceregistry_sql/
+      - ./config/registry/:/arrowhead/serviceregistry_sql/config
+      - ${LIBRARY_BASE}:/arrowhead/lib
+    working_dir: /arrowhead/serviceregistry_sql
+    command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.serviceregistry_sql.ServiceRegistryMain -daemon
+  
+  authorization:
+    container_name: smart-parking-authorization
+    image: openjdk:9-jre-slim
+    restart: always
+    ports:
+      - 8444:8444
+    links:
+      - database
+      - registry
+    networks:
+      - cloud
+    volumes:
+      - ${SOFTWARE_BASE}/authorization/target/:/arrowhead/authorization/
+      - ./config/authorization/:/arrowhead/authorization/config
+      - ${LIBRARY_BASE}:/arrowhead/lib
+    working_dir: /arrowhead/authorization
+    command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.authorization.AuthorizationMain -daemon
+  
+  orchestrator:
+    container_name: smart-parking-orchestrator
+    image: openjdk:9-jre-slim
+    restart: always
+    ports:
+      - 8440:8440
+    links:
+      - database
+      - registry
+      - authorization
+      - gatekeeper
+    networks:
+      - cloud
+    volumes:
+      - ${SOFTWARE_BASE}/orchestrator/target/:/arrowhead/orchestrator/
+      - ./config/orchestrator/:/arrowhead/orchestrator/config
+      - ${LIBRARY_BASE}:/arrowhead/lib
+    working_dir: /arrowhead/orchestrator
+    command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.orchestrator.OrchestratorMain -daemon
+  
+  gatekeeper:
+    container_name: smart-parking-gatekeeper
+    image: openjdk:9-jre-slim
+    restart: always
+    ports:
+      - 8448:8448
+      - 8446:8446
+    links:
+      - database
+      - registry
+    networks:
+      - cloud
+    volumes:
+      - ${SOFTWARE_BASE}/gatekeeper/target/:/arrowhead/gatekeeper/
+      - ./config/gatekeeper/:/arrowhead/gatekeeper/config
+      - ${LIBRARY_BASE}:/arrowhead/lib
+    working_dir: /arrowhead/gatekeeper
+    command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.gatekeeper.GatekeeperMain -daemon -d
+  
+  gateway:
+    container_name: smart-parking-gateway
+    image: openjdk:9-jre-slim
+    restart: always
+    links:
+      - database
+      - registry
+      - broker:main-cloud
+    networks:
+      - cloud
+    volumes:
+      - ${SOFTWARE_BASE}/gateway/target/:/arrowhead/gateway
+      - ./config/gateway:/arrowhead/gateway/config
+      - ${LIBRARY_BASE}:/arrowhead/lib
+    working_dir: /arrowhead/gateway
+    command: java --add-modules java.xml.bind -cp /arrowhead/lib/*:* eu.arrowhead.core.gateway.GatewayMain -daemon -d
+
+  broker:
+    container_name: smart-parking-broker
+    image: rabbitmq:management
+    restart: always
+    networks:
+      - cloud
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+networks:
+  cloud:
+          driver: bridge
